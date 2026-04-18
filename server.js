@@ -199,6 +199,32 @@ router.route('/movies')
     }
   });
 
+router.get(
+  '/movies/movieId/:movieId',
+  authJwtController.isAuthenticated,
+  async (req, res) => {
+    try {
+      const { movieId } = req.params;
+      if (!/^[a-fA-F0-9]{24}$/.test(movieId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid movie id; expected a 24-character id.',
+        });
+      }
+
+      const movie = await Movie.findById(movieId);
+      if (!movie) {
+        return res.status(404).json({ success: false, message: 'Movie not found' });
+      }
+
+      return res.status(200).json(movie);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ success: false, message: 'Error getting movie' });
+    }
+  }
+);
+
 router.get('/movies/:movieparameter', authJwtController.isAuthenticated, async (req, res) => {
   try {
     const movie = await Movie.findOne({ title: req.params.movieparameter });
