@@ -6,6 +6,7 @@ const passport = require('passport');
 const authJwtController = require('./auth_jwt'); // You're not using authController, consider removing it
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const User = require('./Users');
 const Movie = require('./Movies');
 const Review = require('./Reviews');
@@ -210,6 +211,39 @@ router.get(
           success: false,
           message: 'Invalid movie id; expected a 24-character id.',
         });
+      }
+
+      if (req.query.reviews === 'true' || req.query.reviews === true) {
+        const oid = new mongoose.Types.ObjectId(movieId);
+        const results = await Movie.aggregate([
+          { $match: { _id: oid } },
+          {
+            $lookup: {
+              from: 'reviews',
+              localField: '_id',
+              foreignField: 'movieId',
+              as: 'reviews',
+            },
+          },
+          {
+            $addFields: {
+              avgRating: {
+                $cond: {
+                  if: { $gt: [{ $size: '$reviews' }, 0] },
+                  then: { $avg: '$reviews.rating' },
+                  else: null,
+                },
+              },
+            },
+          },
+          { $limit: 1 },
+        ]);
+
+        const movie = results[0];
+        if (!movie) {
+          return res.status(404).json({ success: false, message: 'Movie not found' });
+        }
+        return res.status(200).json(movie);
       }
 
       const movie = await Movie.findById(movieId);
