@@ -92,6 +92,16 @@ router.route('/reviews')
   });
     */
     try {
+      // Validate required fields
+      const requiredFields = ['movieId', 'review', 'rating'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`
+        });
+      }
+      
       const review = new Review({
         movieId: req.body.movieId,
         username: req.user.username,
@@ -121,41 +131,73 @@ router.route('/reviews')
     }
   });
 
-router.get('/movies', authJwtController.isAuthenticated, async (req, res) => {
-  try {
-    const movies = await Movie.find();
-    return res.status(200).json(movies);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: 'Error getting movies' });
-  }
-});
+router.route('/movies')
+  .get(authJwtController.isAuthenticated, async (req, res) => {
+    try {
+      if (req.query.reviews === "true") {
+        const movies = await Movie.aggregate([
+          {
+            $lookup: {
+              from: "reviews",
+              localField: "_id",
+              foreignField: "movieId",
+              as: "reviews"
+            }
+          },
+          {
+            $addFields: {
+              avgRating: {
+                $cond: {
+                  if: { $gt: [ { $size: "$reviews" }, 0 ] },
+                  then: { $avg: "$reviews.rating" },
+                  else: null
+                }
+              }
+            }
+          },
+          {
+            $sort: {
+              avgRating: -1,
+              title: 1,
+            },
+          },
+        ]);
 
-router.post('/movies', authJwtController.isAuthenticated, async (req, res) => {
-  try {
-    const { title, releaseDate, genre, actors } = req.body;
-
-    if (!title || !releaseDate || !genre || !actors || actors.length === 0) {
-      return res.status(400).json({
+        return res.json(movies);
+      } else {
+        const movies = await Movie.find().sort({ title: 1 });
+        return res.json(movies);
+      }
+    } catch (err) {
+      return res.status(500).json({
         success: false,
-        message: 'Movie must include title, releaseDate, genre, and at least one actor.'
+        message: 'Error getting movies',
+        error: err.message,
       });
     }
-
-    const movie = new Movie({
-      title,
-      releaseDate,
-      genre,
-      actors
-    });
-
-    const savedMovie = await movie.save();
-    return res.status(201).json({ movie: savedMovie });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: 'Error saving movie' });
-  }
-});
+  })
+  .post(authJwtController.isAuthenticated, async (req, res) => {
+    try {
+      const movie = new Movie({
+        title: req.body.title,
+        releaseDate: req.body.releaseDate,
+        genre: req.body.genre,
+        actors: req.body.actors
+      });
+      await movie.save();
+      return res.status(201).json({
+        success: true,
+        message: 'Movie created!',
+        movie: movie
+      });
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Error creating movie',
+        error: err.message,
+      });
+    }
+  });
 
 router.get('/movies/:movieparameter', authJwtController.isAuthenticated, async (req, res) => {
   try {
