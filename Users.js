@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
-var bcrypt = require('bcrypt-nodejs');
+var bcrypt = require('bcrypt');
 
 mongoose.Promise = global.Promise;
 
@@ -11,7 +11,6 @@ try {
 }catch (error) {
     console.log("could not connect");
 }
-mongoose.set('useCreateIndex', true);
 
 //user schema
 var UserSchema = new Schema({
@@ -26,7 +25,7 @@ UserSchema.pre('save', function(next) {
     //hash the password
     if (!user.isModified('password')) return next();
 
-    bcrypt.hash(user.password, null, null, function(err, hash) {
+    bcrypt.hash(user.password, 10, function(err, hash) {
         if (err) return next(err);
 
         //change the password
