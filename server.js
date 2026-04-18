@@ -102,6 +102,7 @@ router.route('/reviews')
       return res.status(201).json({
         success: true,
         message: 'Review created!',
+        movieId: review.movieId,
         review: review
       });
     } catch (err) {
@@ -149,7 +150,7 @@ router.post('/movies', authJwtController.isAuthenticated, async (req, res) => {
     });
 
     const savedMovie = await movie.save();
-    return res.status(201).json(savedMovie);
+    return res.status(201).json({ movie: savedMovie });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Error saving movie' });
