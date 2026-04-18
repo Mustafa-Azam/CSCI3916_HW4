@@ -105,7 +105,8 @@ describe('Test Movie Routes', () => {
                 
             res.should.have.status(201);
             res.body.should.be.an('object');
-            res.body.should.have.property('movieId');
+            res.body.should.have.property('review');
+            res.body.review.should.have.property('movieId');
         });
 
         it('should retrieve all reviews', async () => {
