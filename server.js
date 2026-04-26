@@ -183,7 +183,8 @@ router.route('/movies')
         title: req.body.title,
         releaseDate: req.body.releaseDate,
         genre: req.body.genre,
-        actors: req.body.actors
+        actors: req.body.actors,
+        imageUrl: req.body.imageUrl,
       });
       await movie.save();
       return res.status(201).json({
